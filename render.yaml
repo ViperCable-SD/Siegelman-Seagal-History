@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: siegelman-seagal-history
+    runtime: node
+    plan: starter          # a paid plan is required for the disk below
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /healthz
+    envVars:
+      - key: DATA_DIR
+        value: /var/data
+      - key: MAX_UPLOAD_MB
+        value: "150"
+      - key: ADMIN_KEY
+        generateValue: true     # your keeper key; read it in the dashboard
+      - key: COOKIE_SECRET
+        generateValue: true
+      - key: FAMILY_PASSCODE
+        sync: false             # set this yourself; it unlocks Next Generations
+    disk:
+      name: family-archive
+      mountPath: /var/data
+      sizeGB: 10

@@ -1,0 +1,34 @@
+{
+  "site": {
+    "name": "Siegelman / Seagal",
+    "tagline": "The family of Dora and Nathan Seagal",
+    "accessionPrefix": "SS"
+  },
+  "media": [
+    {
+      "sourceFile": "cover.jpg",
+      "cover": true,
+      "title": "The family, gathered",
+      "year": "",
+      "place": "",
+      "medium": "Photograph of a framed print",
+      "section": "albums",
+      "caption": "Twelve people in a garden. Copied from the framed print, straightened and cleaned. Nobody has yet written down who is who or when it was taken; the clothes point to the 1970s. If you can name anyone, or settle the date, please say so.",
+      "contributor": "The family",
+      "people": []
+    }
+  ],
+  "people": [
+    { "name": "Dora Seagal", "generation": 1, "relation": "Grandmother", "summary": "" },
+    { "name": "Nathan Seagal", "generation": 1, "relation": "Grandfather", "summary": "" },
+    { "name": "Abe Seagal", "generation": 2, "relation": "Son of Dora and Nathan", "summary": "" },
+    { "name": "Joe Seagal", "generation": 2, "relation": "Son of Dora and Nathan", "summary": "" },
+    { "name": "Harry Seagal", "generation": 2, "relation": "Son of Dora and Nathan", "summary": "" },
+    { "name": "Dave Seagal", "generation": 2, "relation": "Son of Dora and Nathan", "summary": "" },
+    { "name": "Lillian Seagal", "generation": 2, "relation": "Daughter of Dora and Nathan", "summary": "" },
+    { "name": "Shirley Seagal", "generation": 2, "relation": "Daughter of Dora and Nathan", "summary": "" },
+    { "name": "Ruth Seagal", "generation": 2, "relation": "Daughter of Dora and Nathan", "summary": "" },
+    { "name": "Mike Seagal", "generation": 2, "relation": "Son of Dora and Nathan", "summary": "" },
+    { "name": "Steve Seagal", "generation": 2, "relation": "Son of Dora and Nathan", "summary": "" }
+  ]
+}
