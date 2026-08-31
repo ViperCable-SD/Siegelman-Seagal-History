@@ -214,6 +214,17 @@ function pillStrip(labelText, options, current, onPick) {
   return strip;
 }
 
+
+/** A prominent way in to the upload form, so adding is never hidden. */
+function addBar(text, href) {
+  const bar = el('div', 'add-bar');
+  const link = el('a', 'btn', text);
+  link.href = href;
+  bar.appendChild(link);
+  bar.appendChild(el('span', 'add-hint', 'Anyone in the family can add to this.'));
+  return bar;
+}
+
 /* =================================================================
    Lightbox
 ================================================================= */
@@ -312,6 +323,32 @@ function peoplePicker() {
 }
 
 const byGeneration = (a, b) => (a.generation - b.generation) || a.createdAt - b.createdAt;
+
+/* Everyone is placed by how far they stand from Dora and Nathan. */
+const GENERATIONS = {
+  1: { title: 'Dora and Nathan', note: 'Where the family starts.' },
+  2: { title: 'Their children', note: 'The nine.' },
+  3: { title: 'Grandchildren', note: 'The children of the nine.' },
+  4: { title: 'Great-grandchildren', note: 'Their children in turn.' },
+  5: { title: 'Great-great-grandchildren', note: 'The newest arrivals.' },
+  6: { title: 'Great-great-great-grandchildren', note: '' }
+};
+const GEN_MAX = 6;
+const genTitle = (n) => (GENERATIONS[n] || {}).title || ('Generation ' + n);
+const genNote = (n) => (GENERATIONS[n] || {}).note || '';
+
+/** Which generation bands to show: everything occupied, plus one empty invitation. */
+function generationRange() {
+  const present = state.people.map((p) => p.generation);
+  const highest = present.length ? Math.max.apply(null, present) : 2;
+  const range = [];
+  for (let g = 1; g <= Math.min(GEN_MAX, Math.max(highest + 1, 5)); g++) range.push(g);
+  return range;
+}
+
+function peopleIn(gen) {
+  return state.people.filter((p) => p.generation === gen).sort(byGeneration);
+}
 
 function formShell(titleText, noteText) {
   const panel = el('section', 'panel');
@@ -479,36 +516,36 @@ views.home = () => {
 views.tree = () => {
   const page = el('div', 'page');
   page.appendChild(pageHead('The family', 'Family Tree',
-    'Generations are laid out oldest first. Choose anyone to open their page.'));
+    'Oldest generation first, down to the youngest. Choose anyone to open their page.'));
 
-  const generations = new Map();
-  state.people.slice().sort(byGeneration).forEach((p) => {
-    if (!generations.has(p.generation)) generations.set(p.generation, []);
-    generations.get(p.generation).push(p);
-  });
-
-  if (!generations.size) {
-    page.appendChild(empty('No one is on the tree yet', 'The keeper can add people from the admin key.'));
-    return page;
-  }
-
-  const names = { 1: 'First generation', 2: 'Second generation', 3: 'Third generation', 4: 'Fourth generation', 5: 'Fifth generation' };
-
-  Array.from(generations.keys()).sort((a, b) => a - b).forEach((gen, index, all) => {
+  const bands = generationRange();
+  bands.forEach((gen, index) => {
+    const list = peopleIn(gen);
     const block = el('section', 'tree-gen');
+
     const head = el('div', 'tree-gen-head');
-    head.appendChild(el('h2', null, names[gen] || 'Generation ' + gen));
+    head.appendChild(el('h2', null, genTitle(gen)));
     head.appendChild(el('span', 'rule-line'));
-    head.appendChild(el('span', 'label', generations.get(gen).length + ' people'));
+    head.appendChild(el('span', 'label', list.length ? list.length + ' people' : 'none yet'));
     block.appendChild(head);
 
-    const row = el('div', gen === 1 ? 'tree-couple' : 'tree-row');
-    generations.get(gen).forEach((person, i) => {
-      if (gen === 1 && i > 0) row.appendChild(el('span', 'tree-amp', 'and'));
-      row.appendChild(treeNode(person));
-    });
-    block.appendChild(row);
-    if (index < all.length - 1) block.appendChild(el('div', 'tree-descend'));
+    if (list.length) {
+      const row = el('div', gen === 1 ? 'tree-couple' : 'tree-row');
+      list.forEach((person, i) => {
+        if (gen === 1 && i > 0) row.appendChild(el('span', 'tree-amp', 'and'));
+        row.appendChild(treeNode(person));
+      });
+      block.appendChild(row);
+    } else {
+      const box = el('div', 'gen-empty');
+      box.appendChild(el('p', null, 'This generation is waiting to be filled in.'));
+      const link = el('a', 'btn-quiet', 'Add someone');
+      link.href = '#/keeper';
+      box.appendChild(link);
+      block.appendChild(box);
+    }
+
+    if (index < bands.length - 1) block.appendChild(el('div', 'tree-descend'));
     page.appendChild(block);
   });
 
@@ -540,20 +577,31 @@ function treeNode(person) {
 views.people = () => {
   const page = el('div', 'page');
   page.appendChild(pageHead('The family', 'People',
-    'One page for every person in the archive, holding their dates, their photographs, their stories, and the places they lived.'));
+    'Everyone is placed by how far they stand from Dora and Nathan. Each name opens a page holding their dates, their photographs, their stories and their places.'));
 
-  const generations = new Map();
-  state.people.slice().sort(byGeneration).forEach((p) => {
-    if (!generations.has(p.generation)) generations.set(p.generation, []);
-    generations.get(p.generation).push(p);
-  });
-
-  Array.from(generations.keys()).sort((a, b) => a - b).forEach((gen) => {
+  generationRange().forEach((gen) => {
+    const list = peopleIn(gen);
     const block = el('section', 'section-block');
-    block.appendChild(el('h2', null, gen === 1 ? 'The grandparents' : gen === 2 ? 'Their children' : 'Generation ' + gen));
-    const grid = el('div', 'people-grid');
-    generations.get(gen).forEach((p) => grid.appendChild(personCard(p)));
-    block.appendChild(grid);
+
+    const head = el('div', 'gen-head');
+    const heading = el('h2', null, genTitle(gen));
+    head.appendChild(heading);
+    head.appendChild(el('span', 'gen-count', list.length ? list.length + (list.length === 1 ? ' person' : ' people') : 'none yet'));
+    block.appendChild(head);
+    if (genNote(gen)) block.appendChild(el('p', 'gen-note', genNote(gen)));
+
+    if (list.length) {
+      const grid = el('div', 'people-grid');
+      list.forEach((person) => grid.appendChild(personCard(person)));
+      block.appendChild(grid);
+    } else {
+      const box = el('div', 'gen-empty');
+      box.appendChild(el('p', null, 'Nobody has been added to this generation yet.'));
+      const link = el('a', 'btn-quiet', 'Add someone');
+      link.href = '#/keeper';
+      box.appendChild(link);
+      block.appendChild(box);
+    }
     page.appendChild(block);
   });
 
@@ -721,6 +769,8 @@ views.albums = (groupBy) => {
   page.appendChild(pageHead('The collection', 'Photo Albums',
     'Every photograph in the archive, arranged four different ways. Each one carries its own label.'));
 
+  page.appendChild(addBar('Add a photograph', '#/contribute/media'));
+
   const photos = state.media.filter((m) => m.kind === 'photo');
   if (!photos.length) {
     page.appendChild(empty('The albums are empty', 'Scan one photograph and it becomes the first object in the collection.', 'Add a photograph', '#/contribute?form=media'));
@@ -771,6 +821,8 @@ views.documents = () => {
   page.appendChild(pageHead('The collection', 'Documents & History',
     'Immigration papers, military records, marriage and death certificates, letters, deeds, and anything the newspapers printed about us.'));
 
+  page.appendChild(addBar('Add a document', '#/contribute/media'));
+
   const docs = state.media.filter((m) => m.kind === 'document' || m.section === 'documents');
   if (!docs.length) {
     page.appendChild(empty('No documents yet', 'A ship manifest or a discharge paper often settles an argument that has run for forty years.', 'Add a document', '#/contribute?form=media'));
@@ -801,6 +853,8 @@ views.voices = () => {
   const page = el('div', 'page');
   page.appendChild(pageHead('The family', 'In Their Own Words',
     'Recorded voices and moving pictures. Where someone has typed up a transcript, it sits underneath.'));
+
+  page.appendChild(addBar('Add a recording', '#/contribute/media'));
 
   const recordings = state.media.filter((m) => m.kind === 'audio' || m.kind === 'video');
   if (!recordings.length) {
@@ -1126,6 +1180,14 @@ views.share = () => {
     hint: 'This appears at the end of the story, so the family knows who told it.'
   }));
 
+  const asOrigin = el('input');
+  asOrigin.type = 'checkbox';
+  const originLabel = el('label', 'checkline');
+  originLabel.appendChild(asOrigin);
+  originLabel.appendChild(el('span', null,
+    'This is the family origin story — put it on the front page'));
+  form.appendChild(originLabel);
+
   const title = textInput('The summer everyone slept on the porch', 180);
   title.required = true;
   form.appendChild(field('Title of the story', title, {}));
@@ -1168,7 +1230,7 @@ views.share = () => {
     setStatus(status, 'Saving…');
     try {
       const saved = await jsonPost('/api/stories', {
-        kind: 'story',
+        kind: asOrigin.checked ? 'origin' : 'story',
         title: title.value,
         subtitle: subtitle.value,
         body: body.value,
@@ -1683,6 +1745,322 @@ function messageNode(message, childrenOf) {
   return wrap;
 }
 
+
+/* =================================================================
+   The keeper's page
+   Only reachable with the admin key in the address. Everything the
+   site needs that the public must not be able to do.
+================================================================= */
+
+function generationSelect(current) {
+  const select = selectInput(Object.keys(GENERATIONS).map((g) => [g, g + ' — ' + genTitle(Number(g))]));
+  select.value = String(current || 3);
+  return select;
+}
+
+views.keeper = () => {
+  const page = el('div', 'page');
+  page.appendChild(pageHead('Keeper', 'Looking after the archive',
+    'Only you can see this. It is here because adding people and fixing labels should never require the public to be trusted with it.'));
+
+  if (!state.isAdmin) {
+    const panel = el('section', 'panel');
+    panel.appendChild(el('h2', null, 'Your keeper key is missing'));
+    panel.appendChild(el('p', 'panel-note',
+      'This page needs the key Render generated for you. Add it to the end of the site address, like this, then bookmark the result:'));
+    const code = el('p', 'keeper-example', location.origin + '/?key=YOUR_ADMIN_KEY#/keeper');
+    panel.appendChild(code);
+    panel.appendChild(el('p', 'hint',
+      'You will find ADMIN_KEY in your Render dashboard, under the service, on the Environment tab.'));
+    page.appendChild(panel);
+    return page;
+  }
+
+  /* ---------- add a person ---------- */
+  const { panel: addPanel, form: addForm } = formShell('Add someone to the family',
+    'Dates are worth adding even when approximate — a birth year puts the person on the timeline, and a death year gives them a place in In Memoriam.');
+
+  const name = textInput('Ruth Seagal Kaplan', 80);
+  name.required = true;
+  addForm.appendChild(field('Full name', name, {}));
+
+  const gen = generationSelect(3);
+  addForm.appendChild(field('Generation', gen, {}));
+
+  const relation = textInput('Daughter of Ruth', 120);
+  addForm.appendChild(field('How they connect', relation, { optional: true }));
+
+  const birthPlace = textInput('Brooklyn, New York', 120);
+  addForm.appendChild(field('Born where', birthPlace, { optional: true }));
+
+  const born = textInput('1955', 40);
+  addForm.appendChild(field('Born', born, { optional: true }));
+
+  const died = textInput('leave blank if living', 40);
+  addForm.appendChild(field('Died', died, { optional: true }));
+
+  const summary = textInput('One line that captures them', 400);
+  addForm.appendChild(field('In a sentence', summary, { span2: true, optional: true }));
+
+  const familyOnly = el('input');
+  familyOnly.type = 'checkbox';
+  const check = el('label', 'checkline span-2');
+  check.appendChild(familyOnly);
+  check.appendChild(el('span', null, 'Living and private — keep this person behind the family passcode'));
+  addForm.appendChild(check);
+
+  const addRow = submitRow('Add to the family');
+  addForm.appendChild(addRow.row);
+
+  addForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    addRow.button.disabled = true;
+    setStatus(addRow.status, 'Adding…');
+    try {
+      await jsonPost('/api/people', {
+        name: name.value, generation: Number(gen.value), relation: relation.value,
+        born: born.value, died: died.value, birthPlace: birthPlace.value,
+        summary: summary.value, visibility: familyOnly.checked ? 'family' : 'public'
+      });
+      addForm.reset();
+      gen.value = '3';
+      setStatus(addRow.status, 'Added.', 'ok');
+      await loadData();
+      route();
+    } catch (err) {
+      setStatus(addRow.status, err.message, 'err');
+    } finally {
+      addRow.button.disabled = false;
+    }
+  });
+  page.appendChild(addPanel);
+
+  /* ---------- edit the people already here ---------- */
+  const peopleBlock = el('section', 'section-block');
+  peopleBlock.appendChild(el('h2', null, 'Everyone in the archive'));
+  peopleBlock.appendChild(el('p', 'gen-note',
+    'Choose a name to correct their details, write their life, or pick the photograph that represents them.'));
+
+  generationRange().forEach((g) => {
+    const list = peopleIn(g);
+    if (!list.length) return;
+    peopleBlock.appendChild(el('p', 'label keeper-band', genTitle(g)));
+    const rows = el('div', 'keeper-rows');
+    list.forEach((person) => rows.appendChild(keeperPersonRow(person)));
+    peopleBlock.appendChild(rows);
+  });
+  page.appendChild(peopleBlock);
+
+  /* ---------- edit object labels ---------- */
+  const mediaBlock = el('section', 'section-block');
+  mediaBlock.appendChild(el('h2', null, 'Labels on the collection'));
+  mediaBlock.appendChild(el('p', 'gen-note',
+    'Fix a title, name who is in a photograph, or correct who contributed it.'));
+  if (!state.media.length) {
+    mediaBlock.appendChild(el('p', 'hint', 'Nothing has been uploaded yet.'));
+  } else {
+    const rows = el('div', 'keeper-rows');
+    state.media.slice().sort((a, b) => b.createdAt - a.createdAt)
+      .forEach((item) => rows.appendChild(keeperMediaRow(item)));
+    mediaBlock.appendChild(rows);
+  }
+  page.appendChild(mediaBlock);
+
+  return page;
+};
+
+function keeperRow(titleText, subtitleText) {
+  const row = el('details', 'keeper-row');
+  const summary = el('summary');
+  summary.appendChild(el('span', 'keeper-name', titleText));
+  if (subtitleText) summary.appendChild(el('span', 'keeper-sub', subtitleText));
+  row.appendChild(summary);
+  return row;
+}
+
+function keeperPersonRow(person) {
+  const row = keeperRow(person.name, [lifespan(person), person.relation].filter(Boolean).join(' · ') || 'no dates yet');
+  const form = el('form', 'form keeper-form');
+
+  const name = textInput('', 80); name.value = person.name; name.required = true;
+  form.appendChild(field('Name', name, {}));
+
+  const gen = generationSelect(person.generation);
+  form.appendChild(field('Generation', gen, {}));
+
+  const born = textInput('', 40); born.value = person.born;
+  form.appendChild(field('Born', born, { optional: true }));
+
+  const died = textInput('', 40); died.value = person.died;
+  form.appendChild(field('Died', died, { optional: true }));
+
+  const relation = textInput('', 120); relation.value = person.relation;
+  form.appendChild(field('How they connect', relation, {}));
+
+  const birthPlace = textInput('', 120); birthPlace.value = person.birthPlace;
+  form.appendChild(field('Born where', birthPlace, { optional: true }));
+
+  const summary = textInput('', 400); summary.value = person.summary;
+  form.appendChild(field('In a sentence', summary, { span2: true, optional: true }));
+
+  const biography = textArea('Write as much as you like. Leave a blank line between paragraphs.', 8, 20000);
+  biography.value = person.biography;
+  form.appendChild(field('Their life', biography, { span2: true, optional: true }));
+
+  const theirPhotos = state.media.filter((m) => m.kind === 'photo' && m.peopleIds.includes(person.id));
+  const portrait = selectInput(
+    [['', theirPhotos.length ? 'First photograph tagged with them' : 'No photographs tagged yet']]
+      .concat(theirPhotos.map((m) => [m.id, m.title + (m.year ? ' (' + m.year + ')' : '')]))
+  );
+  portrait.value = person.portraitId || '';
+  form.appendChild(field('Portrait', portrait, { span2: true,
+    hint: 'Tag a photograph with this person and it becomes available here.' }));
+
+  const memorial = el('input'); memorial.type = 'checkbox'; memorial.checked = Boolean(person.memorial);
+  const memLabel = el('label', 'checkline span-2');
+  memLabel.appendChild(memorial);
+  memLabel.appendChild(el('span', null, 'Show on the In Memoriam page'));
+  form.appendChild(memLabel);
+
+  const priv = el('input'); priv.type = 'checkbox'; priv.checked = person.visibility === 'family';
+  const privLabel = el('label', 'checkline span-2');
+  privLabel.appendChild(priv);
+  privLabel.appendChild(el('span', null, 'Living and private — keep behind the family passcode'));
+  form.appendChild(privLabel);
+
+  const { row: actions, button, status } = submitRow('Save changes');
+  const remove = el('button', 'btn-quiet', 'Remove this person');
+  remove.type = 'button';
+  remove.addEventListener('click', async () => {
+    if (!confirm(`Remove ${person.name} from the archive? Their photographs stay, but they will no longer be tagged in them.`)) return;
+    try {
+      await api('/api/people/' + person.id, { method: 'DELETE' });
+      await loadData();
+      route();
+    } catch (err) { alert(err.message); }
+  });
+  actions.appendChild(remove);
+  form.appendChild(actions);
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    button.disabled = true;
+    setStatus(status, 'Saving…');
+    try {
+      await api('/api/people/' + person.id, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.value, generation: Number(gen.value), born: born.value, died: died.value,
+          relation: relation.value, birthPlace: birthPlace.value, summary: summary.value,
+          biography: biography.value, portraitId: portrait.value || null,
+          memorial: memorial.checked, visibility: priv.checked ? 'family' : 'public'
+        })
+      });
+      setStatus(status, 'Saved.', 'ok');
+      await loadData();
+    } catch (err) {
+      setStatus(status, err.message, 'err');
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  row.appendChild(form);
+  return row;
+}
+
+function keeperMediaRow(item) {
+  const row = keeperRow(item.title, [item.accession, item.year, 'by ' + item.contributor].filter(Boolean).join(' · '));
+  const form = el('form', 'form keeper-form');
+
+  const title = textInput('', 160); title.value = item.title; title.required = true;
+  form.appendChild(field('Title', title, {}));
+
+  const year = textInput('', 24); year.value = item.year;
+  form.appendChild(field('Year', year, { optional: true }));
+
+  const place = textInput('', 160); place.value = item.place;
+  form.appendChild(field('Place', place, { optional: true }));
+
+  const medium = textInput('', 120); medium.value = item.medium;
+  form.appendChild(field('Medium', medium, { optional: true }));
+
+  const album = textInput('', 120); album.value = item.album;
+  form.appendChild(field('Album or branch', album, { optional: true }));
+
+  const event = textInput('', 120); event.value = item.event;
+  form.appendChild(field('Occasion', event, { optional: true }));
+
+  const contributor = textInput('', 80); contributor.value = item.contributor;
+  form.appendChild(field('Contributed by', contributor, { span2: true }));
+
+  const caption = textArea('', 4, 3000); caption.value = item.caption;
+  form.appendChild(field('Description', caption, { span2: true, optional: true }));
+
+  const back = textArea('', 2, 800); back.value = item.handwrittenBack;
+  form.appendChild(field('Writing on the back', back, { span2: true, optional: true }));
+
+  const chosen = new Set(item.peopleIds);
+  const picker = el('fieldset', 'field field-block span-2');
+  picker.appendChild(el('legend', null, 'Who is in it?'));
+  const strip = el('div', 'strip');
+  state.people.slice().sort(byGeneration).forEach((person) => {
+    const pill = el('button', 'pill', person.name);
+    pill.type = 'button';
+    pill.setAttribute('aria-pressed', String(chosen.has(person.id)));
+    pill.addEventListener('click', () => {
+      const on = pill.getAttribute('aria-pressed') === 'true';
+      pill.setAttribute('aria-pressed', String(!on));
+      if (on) chosen.delete(person.id); else chosen.add(person.id);
+    });
+    strip.appendChild(pill);
+  });
+  picker.appendChild(strip);
+  form.appendChild(picker);
+
+  const { row: actions, button, status } = submitRow('Save label');
+  const remove = el('button', 'btn-quiet', 'Remove from the archive');
+  remove.type = 'button';
+  remove.addEventListener('click', async () => {
+    if (!confirm(`Remove "${item.title}"? The file is deleted and cannot be recovered.`)) return;
+    try {
+      await api('/api/media/' + item.id, { method: 'DELETE' });
+      await loadData();
+      route();
+    } catch (err) { alert(err.message); }
+  });
+  actions.appendChild(remove);
+  form.appendChild(actions);
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    button.disabled = true;
+    setStatus(status, 'Saving…');
+    try {
+      await api('/api/media/' + item.id, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: title.value, year: year.value, place: place.value, medium: medium.value,
+          album: album.value, event: event.value, contributor: contributor.value,
+          caption: caption.value, handwrittenBack: back.value,
+          peopleIds: Array.from(chosen).join(',')
+        })
+      });
+      setStatus(status, 'Saved.', 'ok');
+      await loadData();
+    } catch (err) {
+      setStatus(status, err.message, 'err');
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  row.appendChild(form);
+  return row;
+}
+
 /* =================================================================
    Router
 ================================================================= */
@@ -1701,7 +2079,8 @@ const ROUTES = {
   'timeline': views.timeline,
   'memoriam': views.memoriam,
   'next': views.next,
-  'contribute': (a) => views.contribute(a)
+  'contribute': (a) => views.contribute(a),
+  'keeper': views.keeper
 };
 
 function route() {
@@ -1730,8 +2109,22 @@ function route() {
   window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
   main.focus({ preventScroll: true });
   markCurrentLink(key);
+  showKeeperLink();
   $('#sitenav').classList.remove('open');
   $('#menu-toggle').setAttribute('aria-expanded', 'false');
+  const more = document.getElementById('more');
+  if (more) more.open = false;
+}
+
+function showKeeperLink() {
+  if (!state.isAdmin || document.getElementById('keeper-link')) return;
+  const menu = document.querySelector('.more-menu');
+  if (!menu) return;
+  menu.appendChild(el('p', 'more-label', 'Keeper'));
+  const link = el('a', null, 'Looking after the archive');
+  link.id = 'keeper-link';
+  link.href = '#/keeper';
+  menu.appendChild(link);
 }
 
 function markCurrentLink(key) {

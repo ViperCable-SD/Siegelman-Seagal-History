@@ -415,6 +415,32 @@ app.post('/api/media', rateLimit(40, 10 * 60 * 1000), (req, res) => {
   });
 });
 
+app.patch('/api/media/:id', requireAdmin, (req, res) => {
+  const item = db.media.find((m) => m.id === req.params.id);
+  if (!item) return res.status(404).json({ error: 'No such object.' });
+
+  const text = { title: 160, event: 120, album: 120, medium: 120, place: 160, year: 24 };
+  Object.entries(text).forEach(([field, max]) => {
+    if (req.body[field] != null) item[field] = clean(req.body[field], max);
+  });
+  if (req.body.caption != null) item.caption = multiline(req.body.caption, 3000);
+  if (req.body.handwrittenBack != null) item.handwrittenBack = multiline(req.body.handwrittenBack, 800);
+  if (req.body.transcript != null) item.transcript = multiline(req.body.transcript, 40000);
+  if (req.body.contributor != null && clean(req.body.contributor, 80)) {
+    item.contributor = clean(req.body.contributor, 80);
+  }
+  if (req.body.peopleIds != null) item.peopleIds = idList(req.body.peopleIds, db.people);
+  if (req.body.section != null && ['albums', 'documents', 'voices'].includes(req.body.section)) {
+    item.section = req.body.section;
+  }
+  if (req.body.year != null) {
+    const four = String(item.year).match(/(\d{4})/);
+    item.decade = four ? String(Math.floor(Number(four[1]) / 10) * 10) + 's' : '';
+  }
+  save();
+  res.json(item);
+});
+
 /* ---- Stories, traditions, recipes, memorials ---- */
 app.post('/api/stories', rateLimit(25, 10 * 60 * 1000), (req, res) => {
   const title = clean(req.body.title, 180);
