@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Siegelman / Seagal — A Family Archive</title>
+<meta name="description" content="An exhibition of one family: the photographs, papers, recordings and stories of the descendants of Dora and Nathan Seagal.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,200;0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,300&family=Karla:wght@400;500;700&family=Caveat:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="/styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%231C2A2C'/><text x='16' y='23' font-size='18' font-family='Georgia' fill='%23EFE6D4' text-anchor='middle'>S</text></svg>">
+</head>
+<body>
+
+<a class="skip" href="#view">Skip to the exhibit</a>
+
+<header class="topbar">
+  <a class="wordmark" href="#/">Siegelman <em>/</em> Seagal</a>
+
+  <button class="menu-toggle" id="menu-toggle" type="button" aria-expanded="false" aria-controls="sitenav">
+    Menu
+  </button>
+
+  <nav class="sitenav" id="sitenav" aria-label="Sections">
+    <a href="#/" class="nav-home">Home</a>
+    <a href="#/tree">Family Tree</a>
+    <a href="#/people">People</a>
+    <a href="#/albums">Photo Albums</a>
+    <a href="#/timeline">Timeline</a>
+
+    <details class="more" id="more">
+      <summary>More</summary>
+      <div class="more-menu">
+        <p class="more-label">The family</p>
+        <a href="#/stories">Their Stories</a>
+        <a href="#/share">Share a Story</a>
+        <a href="#/voices">In Their Own Words</a>
+        <a href="#/memoriam">In Memoriam</a>
+        <a href="#/next">Next Generations</a>
+        <p class="more-label">The collection</p>
+        <a href="#/documents">Documents &amp; History</a>
+        <a href="#/traditions">Traditions &amp; Recipes</a>
+        <p class="more-label">In context</p>
+        <a href="#/places">Places</a>
+      </div>
+    </details>
+
+    <a class="nav-cta" href="#/contribute">Contribute</a>
+  </nav>
+</header>
+
+<main id="view" tabindex="-1"><p class="loading">Opening the archive…</p></main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <p class="footer-name">Siegelman <em>/</em> Seagal</p>
+    <p class="footer-line">Assembled by the descendants of Dora and Nathan Seagal, and open to any of them.</p>
+    <p class="footer-small">
+      Anything added here is visible to anyone who visits, unless it is marked family&nbsp;only.
+      Corrections are welcome and expected — <a href="#/contribute">send one</a>.
+    </p>
+  </div>
+</footer>
+
+<div class="lightbox" id="lightbox" hidden role="dialog" aria-modal="true" aria-label="Enlarged object">
+  <button class="lightbox-close" id="lightbox-close" type="button" aria-label="Close">Close</button>
+  <figure class="lightbox-figure">
+    <img id="lightbox-img" alt="">
+    <figcaption id="lightbox-caption"></figcaption>
+  </figure>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>
